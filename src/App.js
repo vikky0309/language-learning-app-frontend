@@ -1,28 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import './styles.css';
 
 function App() {
     const [text, setText] = useState('');
-    const [targetLang, setTargetLang] = useState('es'); // Default language: Spanish
+    const [targetLang, setTargetLang] = useState('es');
     const [translatedText, setTranslatedText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const debounceTimeout = useRef(null);
 
-    // Function to handle text translation
     const handleTranslate = async () => {
         setIsLoading(true);
         setError('');
         try {
-            const response = await axios.post('http://localhost:5000/translate', {
+            const response = await axios.post('http://localhost:5001/translate', { // Updated port to 5001
                 text,
                 targetLang,
             });
             setTranslatedText(response.data.translatedText);
-        } catch (error) {
-            setError('Translation failed. Please try again.');
+        } catch (err) {
+            if (err.response) {
+                setError(`Translation failed: ${err.response.data.message || err.response.statusText}`);
+            } else if (err.request) {
+                setError('Network error. Please check your connection.');
+            } else {
+                setError('An unexpected error occurred.');
+            }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleInputChange = (e) => {
+        setText(e.target.value);
+        clearTimeout(debounceTimeout.current);
+        debounceTimeout.current = setTimeout(() => {
+            handleTranslate();
+        }, 500);
+    };
+
+    const handleSpeak = () => {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(translatedText);
+            window.speechSynthesis.speak(utterance);
+        } else {
+            setError('Text-to-speech is not supported in this browser.');
         }
     };
 
@@ -36,7 +59,7 @@ function App() {
                 <textarea
                     className="w-full border-2 border-gray-300 rounded-lg p-3 text-lg focus:border-blue-500 focus:outline-none"
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={handleInputChange}
                     placeholder="Type something to translate..."
                     rows="4"
                 ></textarea>
@@ -60,9 +83,21 @@ function App() {
                     </button>
                 </div>
                 {error && <div className="text-red-500 mt-3">{error}</div>}
-                <div className="translation-output bg-gray-100 p-4 mt-4 rounded-lg">
-                    <h2 className="font-semibold text-lg">Translation:</h2>
-                    <p className="text-gray-700">{translatedText || 'Your translated text will appear here.'}</p>
+                <div className="translation-output bg-gray-100 p-4 mt-4 rounded-lg flex items-center">
+                    <div>
+                        <h2 className="font-semibold text-lg">Translation:</h2>
+                        <p className="text-gray-700">
+                            {translatedText || 'Your translated text will appear here.'}
+                        </p>
+                    </div>
+                    {translatedText && (
+                        <button
+                            className="ml-4 bg-green-500 text-white px-3 py-2 rounded-full hover:bg-green-600 transition-all"
+                            onClick={handleSpeak}
+                        >
+                            Speak
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -70,4 +105,3 @@ function App() {
 }
 
 export default App;
-
