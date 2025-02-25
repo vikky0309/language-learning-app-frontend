@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Link, Routes } from 'react-router-dom';
-import Lessons from './lessons.js'; // Corrected import
+import Lessons from './Lessons.js'; // Corrected import
 import Vocabulary from './vocabulary.js'; // Corrected import
 import Profile from './Profile.js';
 import './styles.css';
