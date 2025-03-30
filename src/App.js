@@ -35,7 +35,7 @@ const handleTranslate = async () => {
             }
         } finally {
             setIsLoading(false);
-        }
+        
     };
 
     const handleInputChange = (e) => {
