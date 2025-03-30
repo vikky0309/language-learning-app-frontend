@@ -13,17 +13,19 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const debounceTimeout = useRef(null);
-
-    const handleTranslate = async () => {
-        setIsLoading(true);
-        setError('');
-        try {
-            const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}`, {
-                text,
-                targetLang,
-            });
-            setTranslatedText(response.data.translatedText);
-        } catch (err) {
+const handleTranslate = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+        const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/translate`, { // Corrected URL
+            text,
+            targetLang,
+        });
+        setTranslatedText(response.data.translatedText);
+    } catch (err) {
+        // ... error handling
+    }
+};
             if (err.response) {
                 setError(`Translation failed: ${err.response.data.message || err.response.statusText}`);
             } else if (err.request) {
