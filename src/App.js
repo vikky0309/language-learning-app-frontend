@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { BrowserRouter as Router, Route, Link, Routes } from 'react-router-dom';
-import Lessons from './Lessons.js'; // Corrected import
-import Vocabulary from './vocabulary.js'; // Corrected import
+import Lessons from './Lessons.js';
+import Vocabulary from './vocabulary.js';
 import Profile from './Profile.js';
 import './styles.css';
 
@@ -18,7 +18,7 @@ function App() {
         setIsLoading(true);
         setError('');
         try {
-            const response = await axios.post('http://localhost:5001/translate', {
+            const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}`, {
                 text,
                 targetLang,
             });
@@ -27,7 +27,7 @@ function App() {
             if (err.response) {
                 setError(`Translation failed: ${err.response.data.message || err.response.statusText}`);
             } else if (err.request) {
-                setError('Network error. Please check your connection.');
+                setError('Network error. Please check your connection to the backend server.');
             } else {
                 setError('An unexpected error occurred.');
             }
@@ -51,6 +51,17 @@ function App() {
         } else {
             setError('Text-to-speech is not supported in this browser.');
         }
+    };
+
+    const handleRetry = () => {
+        if (!isLoading) {
+            handleTranslate();
+        }
+    };
+
+    const handleClear = () => {
+        setText('');
+        setTranslatedText('');
     };
 
     return (
@@ -114,12 +125,29 @@ function App() {
                                         {translatedText || 'Your translated text will appear here.'}
                                     </p>
                                     {translatedText && (
-                                        <div className="mt-6 flex justify-end">
+                                        <div className="mt-6 flex justify-between">
                                             <button
-                                                className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition-all text-lg"
+                                                className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition-all text-lg mr-2"
                                                 onClick={handleSpeak}
                                             >
                                                 Speak
+                                            </button>
+                                            <button
+                                                className="bg-gray-400 text-white px-4 py-2 rounded-full hover:bg-gray-500 transition-all text-lg"
+                                                onClick={handleClear}
+                                            >
+                                                Clear
+                                            </button>
+                                        </div>
+                                    )}
+                                    {error && (
+                                        <div className="mt-4 flex justify-center">
+                                            <button
+                                                className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition-all text-lg"
+                                                onClick={handleRetry}
+                                                disabled={isLoading}
+                                            >
+                                                Retry
                                             </button>
                                         </div>
                                     )}
