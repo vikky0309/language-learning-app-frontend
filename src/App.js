@@ -18,7 +18,7 @@ function App() {
         setIsLoading(true);
         setError('');
         try {
-            const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}`, {
+            const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/translate`, { // Corrected URL
                 text,
                 targetLang,
             });
