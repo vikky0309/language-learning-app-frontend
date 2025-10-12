@@ -1,164 +1,173 @@
-import React, { useState, useRef } from 'react';
-import axios from 'axios';
-import { BrowserRouter as Router, Route, Link, Routes } from 'react-router-dom';
-import Lessons from './Lessons.js';
-import Vocabulary from './vocabulary.js';
-import Profile from './Profile.js';
-import './styles.css';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import './App.css';
 
-function App() {
-    const [text, setText] = useState('');
-    const [targetLang, setTargetLang] = useState('es');
-    const [translatedText, setTranslatedText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
-    const debounceTimeout = useRef(null);
+const App = () => {
+  const [inputText, setInputText] = useState("hello"); // Set default text for demonstration
+  const [translatedText, setTranslatedText] = useState("Halo"); // Set default result for demonstration
+  const [sourceLang, setSourceLang] = useState("en"); // Default English
+  const [targetLang, setTargetLang] = useState("id"); // Default Bahasa Indonesia
+  const [languages, setLanguages] = useState([]);
+  const [isTranslating, setIsTranslating] = useState(false); // To disable button while translating
 
-    const handleTranslate = async () => {
-        setIsLoading(true);
-        setError('');
-        try {
-            const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/translate`, { // Corrected URL
-                text,
-                targetLang,
-            });
-            setTranslatedText(response.data.translatedText);
-        } catch (err) {
-            if (err.response) {
-                setError(`Translation failed: ${err.response.data.message || err.response.statusText}`);
-            } else if (err.request) {
-                setError('Network error. Please check your connection to the backend server.');
-            } else {
-                setError('An unexpected error occurred.');
-            }
-        } finally {
-            setIsLoading(false);
+  // 🔹 Load languages from API on mount
+  useEffect(() => {
+    const fetchLanguages = async () => {
+      try {
+        const res = await axios.get(
+          "https://text-translator2.p.rapidapi.com/getLanguages",
+          {
+            headers: {
+              "X-RapidAPI-Key":
+                "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
+              "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
+            },
+          }
+        );
+
+        // API response structure is res.data.data.languages
+        const languageList = res.data.data.languages || [];
+        setLanguages(languageList);
+
+        // Optional: Ensure default codes are available, or update defaults
+        const defaultSource = languageList.find(lang => lang.code === "en") ? "en" : languageList[0]?.code || "";
+        const defaultTarget = languageList.find(lang => lang.code === "id") ? "id" : languageList[1]?.code || languageList[0]?.code || "";
+        
+        setSourceLang(defaultSource);
+        setTargetLang(defaultTarget);
+
+      } catch (error) {
+        console.error("Error fetching languages:", error);
+        // Optionally set a fallback language list or error state
+      }
+    };
+
+    fetchLanguages();
+  }, []);
+
+  // 🔹 Handle translation
+  const handleTranslate = async () => {
+    if (!inputText.trim() || isTranslating) {
+      alert("Please enter text to translate!");
+      return;
+    }
+
+    setIsTranslating(true);
+    setTranslatedText("Translating...");
+
+    try {
+      const res = await axios.post(
+        "https://text-translator2.p.rapidapi.com/translate",
+        new URLSearchParams({
+          source_language: sourceLang,
+          target_language: targetLang,
+          text: inputText,
+        }),
+        {
+          headers: {
+            "content-type": "application/x-www-form-urlencoded",
+            "X-RapidAPI-Key":
+              "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
+            "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
+          },
         }
-    };
+      );
 
-    const handleInputChange = (e) => {
-        setText(e.target.value);
-        clearTimeout(debounceTimeout.current);
-        debounceTimeout.current = setTimeout(() => {
-            handleTranslate();
-        }, 500);
-    };
+      setTranslatedText(res.data.data.translatedText);
+    } catch (error) {
+      console.error("Error translating text:", error);
+      setTranslatedText("Translation failed. Please check your API key/limit or input text.");
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
-    const handleSpeak = () => {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(translatedText);
-            window.speechSynthesis.speak(utterance);
-        } else {
-            setError('Text-to-speech is not supported in this browser.');
-        }
-    };
+  // 🔹 Handle language swap
+  const handleSwap = () => {
+    setSourceLang(targetLang);
+    setTargetLang(sourceLang);
+    // Optionally re-run translation on swap if input is not empty
+    if (inputText.trim()) {
+        handleTranslate();
+    }
+  };
 
-    const handleRetry = () => {
-        if (!isLoading) {
-            handleTranslate();
-        }
-    };
+  return (
+    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "20px" }}>
+      <h2>🌍 Language Translator</h2>
 
-    const handleClear = () => {
-        setText('');
-        setTranslatedText('');
-    };
+      {/* Input Text */}
+      <textarea
+        rows="4"
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Enter text to translate"
+        style={{ width: "100%", marginBottom: "10px" }}
+      />
 
-    return (
-        <Router>
-            <div className="app bg-gray-100 min-h-screen">
-                <nav className="bg-blue-600 p-4 text-white shadow-md">
-                    <div className="container mx-auto flex justify-between items-center">
-                        <h1 className="text-xl font-semibold">Language Learning App</h1>
-                        <div className="space-x-4">
-                            <li><Link to="/" className="hover:text-gray-300">Home</Link></li>
-                            <li><Link to="/lessons" className="hover:text-gray-300">Lessons</Link></li>
-                            <li><Link to="/vocabulary" className="hover:text-gray-300">Vocabulary</Link></li>
-                            <li><Link to="/profile" className="hover:text-gray-300">Profile</Link></li>
-                        </div>
-                    </div>
-                </nav>
-                <div className="container mx-auto p-6">
-                    <header className="header text-center mb-8">
-                        <h1 className="text-4xl font-bold text-blue-800">Language Learning App</h1>
-                        <p className="text-lg opacity-80 mt-2">Translate & learn with ease</p>
-                    </header>
-                    <Routes>
-                        <Route path="/lessons" element={<Lessons />} />
-                        <Route path="/vocabulary" element={<Vocabulary />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/" element={
-                            <div className="content bg-white shadow-lg rounded-xl p-8 w-full max-w-lg mx-auto">
-                                <textarea
-                                    className="w-full border-2 border-gray-300 rounded-lg p-4 text-lg focus:border-blue-500 focus:outline-none mb-4"
-                                    value={text}
-                                    onChange={handleInputChange}
-                                    placeholder="Type something to translate..."
-                                    rows="4"
-                                ></textarea>
-                                <div className="flex justify-between items-center mb-4">
-                                    <select
-                                        className="border-2 border-gray-300 rounded-lg p-3 text-lg focus:border-blue-500 focus:outline-none"
-                                        value={targetLang}
-                                        onChange={(e) => setTargetLang(e.target.value)}
-                                    >
-                                        <option value="es">Spanish</option>
-                                        <option value="fr">French</option>
-                                        <option value="de">German</option>
-                                        <option value="zh-cn">Chinese</option>
-                                    </select>
-                                </div>
-                                <div className="mt-6 flex justify-center">
-                                    <button
-                                        className="bg-blue-500 text-white px-8 py-3 rounded-lg shadow-md hover:bg-blue-600 transition-all text-lg"
-                                        onClick={handleTranslate}
-                                        disabled={isLoading}
-                                    >
-                                        {isLoading ? 'Translating...' : 'Translate'}
-                                    </button>
-                                </div>
-                                {error && <div className="text-red-500 mt-3">{error}</div>}
-                                {isLoading && <div className="mt-3">Loading...</div>}
-                                <div className="translation-output bg-gray-100 p-6 mt-8 rounded-lg">
-                                    <h2 className="font-semibold text-xl mb-3 text-gray-800">Translation:</h2>
-                                    <p className="text-gray-700 text-lg">
-                                        {translatedText || 'Your translated text will appear here.'}
-                                    </p>
-                                    {translatedText && (
-                                        <div className="mt-6 flex justify-between">
-                                            <button
-                                                className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition-all text-lg mr-2"
-                                                onClick={handleSpeak}
-                                            >
-                                                Speak
-                                            </button>
-                                            <button
-                                                className="bg-gray-400 text-white px-4 py-2 rounded-full hover:bg-gray-500 transition-all text-lg"
-                                                onClick={handleClear}
-                                            >
-                                                Clear
-                                            </button>
-                                        </div>
-                                    )}
-                                    {error && (
-                                        <div className="mt-4 flex justify-center">
-                                            <button
-                                                className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition-all text-lg"
-                                                onClick={handleRetry}
-                                                disabled={isLoading}
-                                            >
-                                                Retry
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        } />
-                    </Routes>
-                </div>
-            </div>
-        </Router>
-    );
-}
+      {/* Language Selectors and Swap Button */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+        
+        {/* Source Language Dropdown */}
+        <select 
+            value={sourceLang} 
+            onChange={(e) => setSourceLang(e.target.value)}
+            style={{ padding: "8px", minWidth: "150px" }}
+        >
+          {/* Add a default placeholder option */}
+          <option value="" disabled>Select Source Language</option>
+          {languages.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Swap Button */}
+        <button 
+            onClick={handleSwap} 
+            style={{ padding: "8px 12px", border: "1px solid #ccc", background: "#f0f0f0" }}
+            title="Swap Languages"
+        >
+            &#8644; {/* Unicode for Left Right Arrow */}
+        </button>
+
+        {/* Target Language Dropdown */}
+        <select 
+            value={targetLang} 
+            onChange={(e) => setTargetLang(e.target.value)}
+            style={{ padding: "8px", minWidth: "150px" }}
+        >
+          {/* Add a default placeholder option */}
+          <option value="" disabled>Select Target Language</option>
+          {languages.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.name}
+            </option>
+          ))}
+        </select>
+
+        <button onClick={handleTranslate} disabled={isTranslating || !inputText.trim()}>
+          {isTranslating ? "Translating..." : "Translate"}
+        </button>
+
+      </div>
+
+      {/* Output */}
+      <h3>Result:</h3>
+      <div
+        style={{
+          minHeight: "60px",
+          padding: "10px",
+          border: "1px solid #ccc",
+          background: "#f9f9f9",
+          whiteSpace: "pre-wrap", // Preserve formatting
+        }}
+      >
+        {translatedText}
+      </div>
+    </div>
+  );
+};
 
 export default App;
