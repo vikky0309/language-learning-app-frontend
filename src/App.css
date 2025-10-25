@@ -57,7 +57,7 @@ header h1 {
 /* Inputs */
 textarea, select, .output {
   width: 100%;
-  margin: 15px 0;
+  margin: 12px 0;
   padding: 14px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 12px;
@@ -80,10 +80,14 @@ textarea:focus, select:focus, .output:focus-within {
 button {
   background: linear-gradient(135deg, #1a1a1a, #000000); /* matte black */
   color: #facc15; /* rich yellow text */
+  max-width: 600px;
   padding: 14px;
+  text-align: center;
   width: 100%;
+  margin: 60px auto;
   border: none;
-  border-radius: 12px;
+  border-radius: 20px;
+  box-sizing: border-box;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -94,7 +98,7 @@ button {
 button:hover {
   background: linear-gradient(135deg, #000000, #333333);
   color: #ffdf4d; /* lighter yellow glow */
-  transform: scale(1.02);
+  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
@@ -111,8 +115,9 @@ button:active {
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 12px;
   padding: 16px;
+  margin-top: 20px;
   min-height: 70px;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.6;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
   transition: background 0.3s ease, box-shadow 0.3s ease;
@@ -181,7 +186,8 @@ body.dark button:hover {
 }
 @media (max-width: 768px) {
   header h1 {
-    font-size: 18px;
+    font-size: 18rem;
+    margin-bottom: 10px;
   }
 
   textarea, select, button, .output {
@@ -215,6 +221,6 @@ body.dark button:hover {
 
   button {
     border-radius: 10px;
-    font-size: 14px;
+    font-size: 15px;
   }
 }
