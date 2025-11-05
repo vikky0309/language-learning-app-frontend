@@ -1,173 +1,271 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import './App.css';
 
-const App = () => {
-  const [inputText, setInputText] = useState("hello"); // Set default text for demonstration
-  const [translatedText, setTranslatedText] = useState("Halo"); // Set default result for demonstration
-  const [sourceLang, setSourceLang] = useState("en"); // Default English
-  const [targetLang, setTargetLang] = useState("id"); // Default Bahasa Indonesia
-  const [languages, setLanguages] = useState([]);
-  const [isTranslating, setIsTranslating] = useState(false); // To disable button while translating
+// --- Language Selector Component (Defined internally for App.js) ---
+const LanguageSelector = ({ 
+    selectedLang, 
+    setSelectedLang, 
+    placeholder, 
+    languageOptions, 
+    isLoading 
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const containerRef = useRef(null);
 
-  // 🔹 Load languages from API on mount
-  useEffect(() => {
-    const fetchLanguages = async () => {
-      try {
-        const res = await axios.get(
-          "https://text-translator2.p.rapidapi.com/getLanguages",
-          {
-            headers: {
-              "X-RapidAPI-Key":
-                "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
-              "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
-            },
-          }
-        );
+    // Filter languages based on the component's current search term
+    const filteredLanguages = languageOptions.filter(lang =>
+        lang.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-        // API response structure is res.data.data.languages
-        const languageList = res.data.data.languages || [];
-        setLanguages(languageList);
-
-        // Optional: Ensure default codes are available, or update defaults
-        const defaultSource = languageList.find(lang => lang.code === "en") ? "en" : languageList[0]?.code || "";
-        const defaultTarget = languageList.find(lang => lang.code === "id") ? "id" : languageList[1]?.code || languageList[0]?.code || "";
-        
-        setSourceLang(defaultSource);
-        setTargetLang(defaultTarget);
-
-      } catch (error) {
-        console.error("Error fetching languages:", error);
-        // Optionally set a fallback language list or error state
-      }
+    const handleSelect = (lang) => {
+        setSelectedLang(lang.code);
+        setIsOpen(false);
+        setSearchTerm('');
     };
 
-    fetchLanguages();
-  }, []);
+    // Effect to handle clicking outside to close the dropdown
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) {
+                setIsOpen(false);
+                setSearchTerm('');
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
-  // 🔹 Handle translation
-  const handleTranslate = async () => {
-    if (!inputText.trim() || isTranslating) {
-      alert("Please enter text to translate!");
-      return;
-    }
+    const currentLang = languageOptions.find(lang => lang.code === selectedLang);
+    const displayValue = currentLang ? currentLang.name : placeholder;
+    // When open, show the search term; when closed, show the selected language name
+    const inputValue = isOpen ? searchTerm : displayValue;
 
-    setIsTranslating(true);
-    setTranslatedText("Translating...");
+    return (
+        <div className="language-selector-container" ref={containerRef}>
+            <input
+                type="text"
+                className="lang-selector-display"
+                placeholder={isLoading ? "Loading..." : placeholder}
+                value={inputValue}
+                readOnly={!isOpen || isLoading}
+                onClick={() => !isLoading && setIsOpen(true)}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            
+            {isOpen && (
+                <ul className="language-list">
+                    {isLoading && <li className="loading">Loading...</li>} 
 
-    try {
-      const res = await axios.post(
-        "https://text-translator2.p.rapidapi.com/translate",
-        new URLSearchParams({
-          source_language: sourceLang,
-          target_language: targetLang,
-          text: inputText,
-        }),
-        {
-          headers: {
-            "content-type": "application/x-www-form-urlencoded",
-            "X-RapidAPI-Key":
-              "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
-            "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
-          },
+                    {!isLoading && (
+                        <input
+                            type="text"
+                            className="language-search-bar"
+                            placeholder="Search language..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            // Prevent the list from closing when focusing the search bar
+                            onMouseDown={(e) => e.stopPropagation()} 
+                            autoFocus
+                        />
+                    )}
+                    
+                    {!isLoading && (
+                        filteredLanguages.length > 0 ? (
+                            filteredLanguages.map(lang => (
+                                <li 
+                                    key={lang.code} 
+                                    onClick={() => handleSelect(lang)}
+                                    // Prevent external click handler from firing too quickly
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    className={selectedLang === lang.code ? 'selected' : ''}
+                                >
+                                    {lang.name}
+                                </li>
+                            ))
+                        ) : (
+                            <li className="no-results">No results found.</li>
+                        )
+                    )}
+                </ul>
+            )}
+        </div>
+    );
+};
+// ------------------------------------------------------------------
+
+
+const App = () => {
+    const [inputText, setInputText] = useState("hello"); 
+    const [translatedText, setTranslatedText] = useState("Halo"); 
+    const [sourceLang, setSourceLang] = useState("en"); 
+    const [targetLang, setTargetLang] = useState("id"); 
+    const [languages, setLanguages] = useState([]);
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [notification, setNotification] = useState(null); // New state for in-app messages
+
+    // 🔹 Load languages from API on mount
+    useEffect(() => {
+        const fetchLanguages = async () => {
+            try {
+                const res = await axios.get(
+                    "https://text-translator2.p.rapidapi.com/getLanguages",
+                    {
+                        headers: {
+                            "X-RapidAPI-Key":
+                                "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
+                            "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
+                        },
+                    }
+                );
+
+                const languageList = res.data.data.languages || [];
+                setLanguages(languageList);
+
+                // Set initial default codes
+                const defaultSource = languageList.find(lang => lang.code === "en") ? "en" : languageList[0]?.code || "";
+                const defaultTarget = languageList.find(lang => lang.code === "id") ? "id" : languageList[1]?.code || languageList[0]?.code || "";
+                
+                setSourceLang(defaultSource);
+                setTargetLang(defaultTarget);
+
+            } catch (error) {
+                console.error("Error fetching languages:", error);
+                setNotification("Error: Could not load language list from API.");
+            }
+        };
+
+        fetchLanguages();
+    }, []);
+
+    // 🔹 Effect to clear notification
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 3000);
+            return () => clearTimeout(timer);
         }
-      );
+    }, [notification]);
 
-      setTranslatedText(res.data.data.translatedText);
-    } catch (error) {
-      console.error("Error translating text:", error);
-      setTranslatedText("Translation failed. Please check your API key/limit or input text.");
-    } finally {
-      setIsTranslating(false);
-    }
-  };
+    // 🔹 Handle translation
+    const handleTranslate = async () => {
+        if (!inputText.trim() || isTranslating) {
+            setNotification("Please enter text to translate.");
+            return;
+        }
 
-  // 🔹 Handle language swap
-  const handleSwap = () => {
-    setSourceLang(targetLang);
-    setTargetLang(sourceLang);
-    // Optionally re-run translation on swap if input is not empty
-    if (inputText.trim()) {
-        handleTranslate();
-    }
-  };
+        setIsTranslating(true);
+        setTranslatedText("Translating...");
+        setNotification(null); // Clear previous notifications
 
-  return (
-    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "20px" }}>
-      <h2>🌍 Language Translator</h2>
+        try {
+            const res = await axios.post(
+                "https://text-translator2.p.rapidapi.com/translate",
+                new URLSearchParams({
+                    source_language: sourceLang,
+                    target_language: targetLang,
+                    text: inputText,
+                }),
+                {
+                    headers: {
+                        "content-type": "application/x-www-form-urlencoded",
+                        "X-RapidAPI-Key":
+                            "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
+                        "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
+                    },
+                }
+            );
 
-      {/* Input Text */}
-      <textarea
-        rows="4"
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        placeholder="Enter text to translate"
-        style={{ width: "100%", marginBottom: "10px" }}
-      />
+            setTranslatedText(res.data.data.translatedText);
+        } catch (error) {
+            console.error("Error translating text:", error);
+            setTranslatedText("Translation failed.");
+            setNotification("Error: Translation failed. Check API key/limit.");
+        } finally {
+            setIsTranslating(false);
+        }
+    };
 
-      {/* Language Selectors and Swap Button */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-        
-        {/* Source Language Dropdown */}
-        <select 
-            value={sourceLang} 
-            onChange={(e) => setSourceLang(e.target.value)}
-            style={{ padding: "8px", minWidth: "150px" }}
-        >
-          {/* Add a default placeholder option */}
-          <option value="" disabled>Select Source Language</option>
-          {languages.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.name}
-            </option>
-          ))}
-        </select>
+    // 🔹 Handle language swap
+    const handleSwap = () => {
+        setSourceLang(targetLang);
+        setTargetLang(sourceLang);
+        if (inputText.trim()) {
+            handleTranslate();
+        }
+    };
 
-        {/* Swap Button */}
-        <button 
-            onClick={handleSwap} 
-            style={{ padding: "8px 12px", border: "1px solid #ccc", background: "#f0f0f0" }}
-            title="Swap Languages"
-        >
-            &#8644; {/* Unicode for Left Right Arrow */}
-        </button>
+    const isLoading = languages.length === 0;
 
-        {/* Target Language Dropdown */}
-        <select 
-            value={targetLang} 
-            onChange={(e) => setTargetLang(e.target.value)}
-            style={{ padding: "8px", minWidth: "150px" }}
-        >
-          {/* Add a default placeholder option */}
-          <option value="" disabled>Select Target Language</option>
-          {languages.map((lang) => (
-            <option key={lang.code} value={lang.code}>
-              {lang.name}
-            </option>
-          ))}
-        </select>
+    return (
+        <div className="translator-container">
+            <h2>🌍 Language Translator</h2>
 
-        <button onClick={handleTranslate} disabled={isTranslating || !inputText.trim()}>
-          {isTranslating ? "Translating..." : "Translate"}
-        </button>
+            {/* Notification Message */}
+            {notification && (
+                <div className="notification-bar">
+                    {notification}
+                </div>
+            )}
 
-      </div>
+            {/* Input Text */}
+            <textarea
+                rows="4"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Enter text to translate"
+                className="text-input"
+            />
 
-      {/* Output */}
-      <h3>Result:</h3>
-      <div
-        style={{
-          minHeight: "60px",
-          padding: "10px",
-          border: "1px solid #ccc",
-          background: "#f9f9f9",
-          whiteSpace: "pre-wrap", // Preserve formatting
-        }}
-      >
-        {translatedText}
-      </div>
-    </div>
-  );
+            {/* Language Selectors and Swap Button */}
+            <div className="language-controls">
+                
+                {/* 1. Source Language Selector (REPLACES <select>) */}
+                <LanguageSelector
+                    selectedLang={sourceLang}
+                    setSelectedLang={setSourceLang}
+                    placeholder="Select Source Language"
+                    languageOptions={languages}
+                    isLoading={isLoading}
+                />
+
+                {/* Swap Button */}
+                <button 
+                    onClick={handleSwap} 
+                    className="swap-button"
+                    title="Swap Languages"
+                >
+                    &#8644; {/* Unicode for Left Right Arrow */}
+                </button>
+
+                {/* 2. Target Language Selector (REPLACES <select>) */}
+                <LanguageSelector
+                    selectedLang={targetLang}
+                    setSelectedLang={setTargetLang}
+                    placeholder="Select Target Language"
+                    languageOptions={languages}
+                    isLoading={isLoading}
+                />
+
+                <button 
+                    onClick={handleTranslate} 
+                    disabled={isTranslating || !inputText.trim() || isLoading}
+                    className="translate-button"
+                >
+                    {isTranslating ? "Translating..." : "Translate"}
+                </button>
+
+            </div>
+
+            {/* Output */}
+            <h3>Result:</h3>
+            <div className="result-box">
+                {translatedText}
+            </div>
+        </div>
+    );
 };
 
 export default App;
