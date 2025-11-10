@@ -142,7 +142,7 @@ h2 {
 
 /* === Textarea === */
 .text-input {
-  width: 100%;
+  width: 90%;
   padding: 15px;
   border-radius: 12px;
   border: 1px solid rgba(250, 204, 21, 0.2);
@@ -212,7 +212,7 @@ h2 {
   }
 
   .language-selector-container {
-    max-width: 100%;
+    max-width: 90%;
   }
 
   .swap-button {
