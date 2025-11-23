@@ -219,6 +219,7 @@ const App = () => {
     ko: "ko-KR",
     id: "id-ID",
   };
+window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   // ---------------------- SPEECH TO TEXT --------------------------
   const startListening = () => {
