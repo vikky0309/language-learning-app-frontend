@@ -2,6 +2,25 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
 
+// ---------------------- SVG Microphone Component --------------------------
+// This replaces the emoji for a professional look.
+const MicIcon = ({ isListening }) => (
+  // SVG path for a standard microphone icon (Material Design style)
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    width="100%" 
+    height="100%"
+    className={isListening ? "mic-icon listening" : "mic-icon"}
+  >
+    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.91V21h2v-3.09c3.39-.48 6-3.38 6-6.91h-2z"/>
+  </svg>
+);
+// --------------------------------------------------------------------------
+
+
 // --- Language Selector Component (unchanged) ---
 const LanguageSelector = ({
   selectedLang,
@@ -261,28 +280,34 @@ const App = () => {
         <div className="notification-bar">{notification}</div>
       )}
 
-      {/* INPUT TEXT */}
-      <textarea
-        rows="4"
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        placeholder="Enter text to translate"
-        className="text-input"
-      />
+      {/* NEW WRAPPER FOR TEXTAREA AND ICON */}
+      <div className="input-field-wrapper">
+        <textarea
+          rows="4"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Enter text to translate"
+          className="text-input"
+        />
 
-      {/* AUDIO BUTTONS */}
-      <div className="audio-buttons">
-        <button onClick={startListening} className="mic-btn">
-          {listening ? "🎙 Listening..." : "🎤 Speak"}
-        </button>
-
-        <button
-          onClick={() => speak(inputText, sourceLang)}
-          className="speak-btn"
+        {/* MIC BUTTON - Positioned absolutely inside the wrapper */}
+        <button 
+          onClick={startListening} 
+          className="mic-btn" 
+          aria-label={listening ? "Listening..." : "Start voice input"}
         >
-          🔊 Speak Input
+          <MicIcon isListening={listening} />
         </button>
       </div>
+
+
+      {/* SPEAK INPUT BUTTON (Moved outside the wrapper) */}
+      <button
+        onClick={() => speak(inputText, sourceLang)}
+        className="speak-btn input-speaker-btn" /* Added a new class for styling */
+      >
+        🔊 Speak Input
+      </button>
 
       {/* LANGUAGE CONTROLS */}
       <div className="horizontal-controls">

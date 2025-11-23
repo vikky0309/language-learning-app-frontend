@@ -33,10 +33,10 @@ h2 {
 }
 
 /* === Language Controls (Horizontal Layout) === */
-.language-controls {
+.horizontal-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 20px;
@@ -120,7 +120,7 @@ h2 {
 }
 
 /* === Swap Button === */
-.swap-button {
+.swap-btn {
   background: linear-gradient(135deg, #facc15, #c5a307);
   border: none;
   border-radius: 50%;
@@ -135,14 +135,23 @@ h2 {
   transition: 0.3s;
 }
 
-.swap-button:hover {
+.swap-btn:hover {
   background: #fff;
   transform: rotate(180deg);
 }
 
-/* === Textarea === */
+/* ========================================================= */
+/* === IN-FIELD MICROPHONE STYLES === */
+/* ========================================================= */
+
+.input-field-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
 .text-input {
-  width: 90%;
+  width: 100%;
   padding: 15px;
   border-radius: 12px;
   border: 1px solid rgba(250, 204, 21, 0.2);
@@ -150,13 +159,45 @@ h2 {
   color: #fff;
   font-size: 15px;
   resize: none;
-  margin-bottom: 15px;
+  padding-right: 55px;
+  box-sizing: border-box;
 }
 
 .text-input:focus {
   outline: none;
   border: 1px solid #facc15;
   box-shadow: 0 0 10px #facc15;
+}
+
+.mic-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  transition: all 0.2s ease-in-out;
+}
+
+.mic-btn .mic-icon {
+  width: 20px;
+  height: 20px;
+  color: #888;
+}
+
+.mic-btn:hover .mic-icon {
+  color: #facc15;
+}
+
+.mic-btn .mic-icon.listening {
+  color: #e33;
 }
 
 /* === Translate Button === */
@@ -204,9 +245,38 @@ h2 {
   text-align: center;
 }
 
+/* === Speak Button (Input/Output) === */
+.speak-btn {
+  background: #111;
+  border: 2px solid #facc15;
+  color: #facc15;
+  font-size: 0.95rem;
+  padding: 10px 15px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.speak-btn:hover {
+  background: #facc15;
+  color: #000;
+}
+
+.input-speaker-btn {
+  display: block;
+  margin: 0 auto 20px auto;
+  width: 200px;
+}
+
+.output-speaker {
+  display: block;
+  margin: 15px auto 0 auto;
+  width: 100%;
+}
+
 /* === Responsive Design === */
 @media (max-width: 768px) {
-  .language-controls {
+  .horizontal-controls {
     flex-direction: column;
     gap: 12px;
   }
@@ -215,7 +285,7 @@ h2 {
     max-width: 90%;
   }
 
-  .swap-button {
+  .swap-btn {
     width: 42px;
     height: 42px;
     font-size: 18px;
@@ -228,64 +298,4 @@ h2 {
   h2 {
     font-size: 1.5rem;
   }
-}
-
-/* ========================================================= */
-/* === TEXT-TO-SPEECH & SPEECH-TO-TEXT BUTTONS (ADDED ONLY) === */
-/* ========================================================= */
-
-.speech-button {
-  background: #111;
-  border: 2px solid #facc15;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 22px;
-  color: #facc15;
-  cursor: pointer;
-  transition: 0.25s ease;
-  margin: 10px auto;
-}
-
-.speech-button:hover {
-  background: #facc15;
-  color: #000;
-  transform: scale(1.05);
-}
-
-.mic-button {
-  background: #111;
-  border: 2px solid #facc15;
-  border-radius: 50%;
-  width: 55px;
-  height: 55px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 22px;
-  color: #facc15;
-  cursor: pointer;
-  transition: 0.25s ease;
-  margin: 10px auto;
-}
-
-.mic-button:hover {
-  background: #facc15;
-  color: #000;
-  transform: scale(1.05);
-}
-
-.mic-button.listening {
-  background: #facc15;
-  color: #000;
-  animation: pulseMic 1s infinite ease-in-out;
-}
-
-@keyframes pulseMic {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
 }
