@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
 
-// --- Language Selector Component ---
+// --- Language Selector Component (unchanged) ---
 const LanguageSelector = ({
   selectedLang,
   setSelectedLang,
@@ -32,9 +32,7 @@ const LanguageSelector = ({
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const currentLang = languageOptions.find((lang) => lang.code === selectedLang);
@@ -89,7 +87,8 @@ const LanguageSelector = ({
     </div>
   );
 };
-// -----------------------------------------------------
+
+// ---------------------------------------------------------------------------
 
 const App = () => {
   const [inputText, setInputText] = useState("hello");
@@ -99,6 +98,7 @@ const App = () => {
   const [languages, setLanguages] = useState([]);
   const [isTranslating, setIsTranslating] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [listening, setListening] = useState(false);
 
   // Load languages
   useEffect(() => {
@@ -108,8 +108,7 @@ const App = () => {
           "https://text-translator2.p.rapidapi.com/getLanguages",
           {
             headers: {
-              "X-RapidAPI-Key":
-                "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
+              "X-RapidAPI-Key": "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
               "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
             },
           }
@@ -117,13 +116,11 @@ const App = () => {
 
         const list = res.data.data.languages || [];
         setLanguages(list);
+
         const defaultSource =
-          list.find((lang) => lang.code === "en")?.code || list[0]?.code || "";
+          list.find((l) => l.code === "en")?.code || list[0]?.code;
         const defaultTarget =
-          list.find((lang) => lang.code === "id")?.code ||
-          list[1]?.code ||
-          list[0]?.code ||
-          "";
+          list.find((l) => l.code === "id")?.code || list[1]?.code;
 
         setSourceLang(defaultSource);
         setTargetLang(defaultTarget);
@@ -136,7 +133,7 @@ const App = () => {
     fetchLanguages();
   }, []);
 
-  // Clear notification
+  // Auto-clear notifications
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -153,6 +150,7 @@ const App = () => {
 
     setIsTranslating(true);
     setTranslatedText("Translating...");
+
     try {
       const res = await axios.post(
         "https://text-translator2.p.rapidapi.com/translate",
@@ -164,28 +162,93 @@ const App = () => {
         {
           headers: {
             "content-type": "application/x-www-form-urlencoded",
-            "X-RapidAPI-Key":
-              "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
+            "X-RapidAPI-Key": "61f487d004msh9cd3b694cc0c745p1fe8f7jsn2f795d92f8b6",
             "X-RapidAPI-Host": "text-translator2.p.rapidapi.com",
           },
         }
       );
 
       setTranslatedText(res.data.data.translatedText);
-    } catch (error) {
-      console.error("Error translating text:", error);
-      setTranslatedText("Translation failed.");
-      setNotification("Error: Translation failed.");
-    } finally {
-      setIsTranslating(false);
+    } catch (err) {
+      console.error(err);
+      setNotification("Translation failed.");
+      setTranslatedText("Translation error.");
     }
+
+    setIsTranslating(false);
   };
 
-  // Swap
+  // Swap languages
   const handleSwap = () => {
     setSourceLang(targetLang);
     setTargetLang(sourceLang);
     if (inputText.trim()) handleTranslate();
+  };
+
+  // --- Map language codes for speech recognition ---
+  const langMap = {
+    en: "en-US",
+    yo: "yo-NG",
+    fr: "fr-FR",
+    es: "es-ES",
+    de: "de-DE",
+    it: "it-IT",
+    pt: "pt-PT",
+    ar: "ar-SA",
+    zh: "zh-CN",
+    ja: "ja-JP",
+    ko: "ko-KR",
+    id: "id-ID",
+  };
+
+  // ---------------------- SPEECH TO TEXT --------------------------
+  const startListening = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Speech recognition not supported on this device.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = langMap[sourceLang] || "en-US";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    setListening(true);
+    recognition.start();
+
+    recognition.onresult = (event) => {
+      const spoken = event.results[0][0].transcript;
+      setInputText(spoken);
+      setListening(false);
+      handleTranslate();
+    };
+
+    recognition.onerror = () => {
+      setListening(false);
+      setNotification("Speech recognition error.");
+    };
+
+    recognition.onend = () => setListening(false);
+  };
+
+  // ---------------------- TEXT TO SPEECH --------------------------
+  const speak = (text, lang) => {
+    if (!text) return;
+
+    const msg = new SpeechSynthesisUtterance(text);
+
+    const voices = window.speechSynthesis.getVoices();
+    const found = voices.find((v) =>
+      v.lang.toLowerCase().includes(lang.toLowerCase())
+    );
+
+    if (found) msg.voice = found;
+
+    window.speechSynthesis.speak(msg);
   };
 
   const isLoading = languages.length === 0;
@@ -194,8 +257,11 @@ const App = () => {
     <div className="translator-container">
       <h2>🌍 Language Translator</h2>
 
-      {notification && <div className="notification-bar">{notification}</div>}
+      {notification && (
+        <div className="notification-bar">{notification}</div>
+      )}
 
+      {/* INPUT TEXT */}
       <textarea
         rows="4"
         value={inputText}
@@ -204,7 +270,21 @@ const App = () => {
         className="text-input"
       />
 
-      {/* ✅ Horizontal Section */}
+      {/* AUDIO BUTTONS */}
+      <div className="audio-buttons">
+        <button onClick={startListening} className="mic-btn">
+          {listening ? "🎙 Listening..." : "🎤 Speak"}
+        </button>
+
+        <button
+          onClick={() => speak(inputText, sourceLang)}
+          className="speak-btn"
+        >
+          🔊 Speak Input
+        </button>
+      </div>
+
+      {/* LANGUAGE CONTROLS */}
       <div className="horizontal-controls">
         <LanguageSelector
           selectedLang={sourceLang}
@@ -214,7 +294,7 @@ const App = () => {
           isLoading={isLoading}
         />
 
-        <button onClick={handleSwap} className="swap-btn" title="Swap Languages">
+        <button onClick={handleSwap} className="swap-btn">
           ⇄
         </button>
 
@@ -235,7 +315,15 @@ const App = () => {
         </button>
       </div>
 
+      {/* RESULT */}
       <div className="result-box">{translatedText}</div>
+
+      <button
+        className="speak-btn output-speaker"
+        onClick={() => speak(translatedText, targetLang)}
+      >
+        🔊 Speak Translation
+      </button>
     </div>
   );
 };

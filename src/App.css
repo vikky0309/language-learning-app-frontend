@@ -159,7 +159,7 @@ h2 {
   box-shadow: 0 0 10px #facc15;
 }
 
-/* === Translate Button (improved visibility) === */
+/* === Translate Button === */
 .translate-button {
   background: linear-gradient(135deg, #facc15, #c5a307);
   color: #000;
@@ -230,3 +230,62 @@ h2 {
   }
 }
 
+/* ========================================================= */
+/* === TEXT-TO-SPEECH & SPEECH-TO-TEXT BUTTONS (ADDED ONLY) === */
+/* ========================================================= */
+
+.speech-button {
+  background: #111;
+  border: 2px solid #facc15;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  color: #facc15;
+  cursor: pointer;
+  transition: 0.25s ease;
+  margin: 10px auto;
+}
+
+.speech-button:hover {
+  background: #facc15;
+  color: #000;
+  transform: scale(1.05);
+}
+
+.mic-button {
+  background: #111;
+  border: 2px solid #facc15;
+  border-radius: 50%;
+  width: 55px;
+  height: 55px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  color: #facc15;
+  cursor: pointer;
+  transition: 0.25s ease;
+  margin: 10px auto;
+}
+
+.mic-button:hover {
+  background: #facc15;
+  color: #000;
+  transform: scale(1.05);
+}
+
+.mic-button.listening {
+  background: #facc15;
+  color: #000;
+  animation: pulseMic 1s infinite ease-in-out;
+}
+
+@keyframes pulseMic {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
