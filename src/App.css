@@ -45,12 +45,12 @@ h2 {
 /* === Language Selector === */
 .language-selector-container {
   position: relative;
-  width: 100%;
+  width: 90%;
   max-width: 230px;
 }
 
 .lang-selector-display {
-  width: 100%;
+  width: 90%;
   padding: 12px 14px;
   border-radius: 12px;
   border: 2px solid #facc15;
