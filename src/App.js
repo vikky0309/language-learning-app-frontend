@@ -3,9 +3,7 @@ import axios from "axios";
 import "./App.css";
 
 // ---------------------- SVG Microphone Component --------------------------
-// This replaces the emoji for a professional look.
 const MicIcon = ({ isListening }) => (
-  // SVG path for a standard microphone icon (Material Design style)
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
     viewBox="0 0 24 24" 
@@ -18,10 +16,8 @@ const MicIcon = ({ isListening }) => (
     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.91V21h2v-3.09c3.39-.48 6-3.38 6-6.91h-2z"/>
   </svg>
 );
-// --------------------------------------------------------------------------
 
-
-// --- Language Selector Component (unchanged) ---
+// --- Language Selector Component ---
 const LanguageSelector = ({
   selectedLang,
   setSelectedLang,
@@ -73,7 +69,6 @@ const LanguageSelector = ({
       {isOpen && (
         <ul className="language-list">
           {isLoading && <li className="loading">Loading...</li>}
-
           {!isLoading && (
             <input
               type="text"
@@ -85,7 +80,6 @@ const LanguageSelector = ({
               autoFocus
             />
           )}
-
           {!isLoading &&
             (filteredLanguages.length > 0 ? (
               filteredLanguages.map((lang) => (
@@ -107,9 +101,8 @@ const LanguageSelector = ({
   );
 };
 
-// ---------------------------------------------------------------------------
-
 const App = () => {
+  const [activeTab, setActiveTab] = useState("translator");
   const [inputText, setInputText] = useState("hello");
   const [translatedText, setTranslatedText] = useState("Halo");
   const [sourceLang, setSourceLang] = useState("en");
@@ -119,7 +112,22 @@ const App = () => {
   const [notification, setNotification] = useState(null);
   const [listening, setListening] = useState(false);
 
-  // Load languages
+  // --- QUIZ STATE ---
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [score, setScore] = useState(0);
+  const [showScore, setShowScore] = useState(false);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [lastResult, setLastResult] = useState(null);
+  const [wrongAnswers, setWrongAnswers] = useState([]);
+
+  const quizQuestions = [
+    { q: "How do you say 'Thank You' in Indonesian?", a: ["Halo", "Terima Kasih", "Apa kabar?", "Sama-sama"], correct: 1 },
+    { q: "What does 'Dimana' mean?", a: ["Who", "When", "Where", "How"], correct: 2 },
+    { q: "What is 'Selamat Pagi' in English?", a: ["Good Evening", "Good Morning", "Goodbye", "Please"], correct: 1 },
+    { q: "Which word means 'Excuse Me'?", a: ["Permisi", "Ya", "Tidak", "Berapa"], correct: 0 },
+    { q: "How do you ask 'How much?'", a: ["Siapa?", "Apa?", "Dimana?", "Berapa?"], correct: 3 },
+  ];
+
   useEffect(() => {
     const fetchLanguages = async () => {
       try {
@@ -132,27 +140,19 @@ const App = () => {
             },
           }
         );
-
         const list = res.data.data.languages || [];
         setLanguages(list);
-
-        const defaultSource =
-          list.find((l) => l.code === "en")?.code || list[0]?.code;
-        const defaultTarget =
-          list.find((l) => l.code === "id")?.code || list[1]?.code;
-
+        const defaultSource = list.find((l) => l.code === "en")?.code || list[0]?.code;
+        const defaultTarget = list.find((l) => l.code === "id")?.code || list[1]?.code;
         setSourceLang(defaultSource);
         setTargetLang(defaultTarget);
       } catch (err) {
-        console.error("Error fetching languages:", err);
         setNotification("Error: Could not load language list.");
       }
     };
-
     fetchLanguages();
   }, []);
 
-  // Auto-clear notifications
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => setNotification(null), 3000);
@@ -160,16 +160,13 @@ const App = () => {
     }
   }, [notification]);
 
-  // Translate
   const handleTranslate = async () => {
     if (!inputText.trim() || isTranslating) {
       setNotification("Please enter text to translate.");
       return;
     }
-
     setIsTranslating(true);
     setTranslatedText("Translating...");
-
     try {
       const res = await axios.post(
         "https://text-translator2.p.rapidapi.com/translate",
@@ -186,170 +183,260 @@ const App = () => {
           },
         }
       );
-
       setTranslatedText(res.data.data.translatedText);
     } catch (err) {
-      console.error(err);
       setNotification("Translation failed.");
       setTranslatedText("Translation error.");
     }
-
     setIsTranslating(false);
   };
 
-  // Swap languages
   const handleSwap = () => {
     setSourceLang(targetLang);
     setTargetLang(sourceLang);
     if (inputText.trim()) handleTranslate();
   };
 
-  // --- Map language codes for speech recognition ---
   const langMap = {
-    en: "en-US",
-    yo: "yo-NG",
-    fr: "fr-FR",
-    es: "es-ES",
-    de: "de-DE",
-    it: "it-IT",
-    pt: "pt-PT",
-    ar: "ar-SA",
-    zh: "zh-CN",
-    ja: "ja-JP",
-    ko: "ko-KR",
-    id: "id-ID",
+    en: "en-US", yo: "yo-NG", fr: "fr-FR", es: "es-ES", de: "de-DE",
+    it: "it-IT", pt: "pt-PT", ar: "ar-SA", zh: "zh-CN", ja: "ja-JP",
+    ko: "ko-KR", id: "id-ID",
   };
-window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  // ---------------------- SPEECH TO TEXT --------------------------
   const startListening = () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Speech recognition not supported on this device.");
       return;
     }
-
     const recognition = new SpeechRecognition();
-
     recognition.lang = langMap[sourceLang] || "en-US";
     recognition.interimResults = false;
     recognition.continuous = false;
-
     setListening(true);
     recognition.start();
-
     recognition.onresult = (event) => {
       const spoken = event.results[0][0].transcript;
       setInputText(spoken);
       setListening(false);
       handleTranslate();
     };
-
     recognition.onerror = () => {
       setListening(false);
       setNotification("Speech recognition error.");
     };
-
     recognition.onend = () => setListening(false);
   };
 
-  // ---------------------- TEXT TO SPEECH --------------------------
   const speak = (text, lang) => {
     if (!text) return;
-
     const msg = new SpeechSynthesisUtterance(text);
-
     const voices = window.speechSynthesis.getVoices();
-    const found = voices.find((v) =>
-      v.lang.toLowerCase().includes(lang.toLowerCase())
-    );
-
+    const found = voices.find((v) => v.lang.toLowerCase().includes(lang.toLowerCase()));
     if (found) msg.voice = found;
-
     window.speechSynthesis.speak(msg);
+  };
+
+  // --- QUIZ LOGIC ---
+  const handleAnswer = (index) => {
+    if (isAnswered) return;
+    const correctIdx = quizQuestions[currentQuestion].correct;
+    setIsAnswered(true);
+
+    if (index === correctIdx) {
+      setScore(score + 1);
+      setLastResult("Correct! ✨");
+    } else {
+      const correctAnswerText = quizQuestions[currentQuestion].a[correctIdx];
+      setLastResult(`Wrong. The correct answer was: ${correctAnswerText}`);
+      setWrongAnswers([...wrongAnswers, {
+        q: quizQuestions[currentQuestion].q,
+        correct: correctAnswerText
+      }]);
+    }
+
+    // Delay to let user read the feedback
+    setTimeout(() => {
+      const nextQuestion = currentQuestion + 1;
+      if (nextQuestion < quizQuestions.length) {
+        setCurrentQuestion(nextQuestion);
+        setIsAnswered(false);
+        setLastResult(null);
+      } else {
+        setShowScore(true);
+      }
+    }, 2000);
+  };
+
+  const resetQuiz = () => {
+    setCurrentQuestion(0);
+    setScore(0);
+    setShowScore(false);
+    setIsAnswered(false);
+    setLastResult(null);
+    setWrongAnswers([]);
   };
 
   const isLoading = languages.length === 0;
 
   return (
-    <div className="translator-container">
-      <h2>🌍 Language Translator</h2>
+    <div className="app-main-wrapper">
+      <div className="nav-tabs">
+        <button 
+          className={activeTab === 'translator' ? 'nav-btn active' : 'nav-btn'} 
+          onClick={() => setActiveTab('translator')}
+        >
+          🔄 Translator
+        </button>
+        <button 
+          className={activeTab === 'guide' ? 'nav-btn active' : 'nav-btn'} 
+          onClick={() => setActiveTab('guide')}
+        >
+          📚 Learning Guide
+        </button>
+        <button 
+          className={activeTab === 'quiz' ? 'nav-btn active' : 'nav-btn'} 
+          onClick={() => setActiveTab('quiz')}
+        >
+          🎯 Quiz
+        </button>
+      </div>
 
-      {notification && (
-        <div className="notification-bar">{notification}</div>
+      {activeTab === 'translator' && (
+        <div className="translator-container">
+          <h2>🌍 Language Translator</h2>
+          {notification && <div className="notification-bar">{notification}</div>}
+          <div className="input-field-wrapper">
+            <textarea
+              rows="4"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Enter text to translate"
+              className="text-input"
+            />
+            <button onClick={startListening} className="mic-btn">
+              <MicIcon isListening={listening} />
+            </button>
+          </div>
+          <button onClick={() => speak(inputText, sourceLang)} className="speak-btn input-speaker-btn">
+            🔊 Speak Input
+          </button>
+          <div className="horizontal-controls">
+            <LanguageSelector
+              selectedLang={sourceLang} setSelectedLang={setSourceLang}
+              placeholder="From" languageOptions={languages} isLoading={isLoading}
+            />
+            <button onClick={handleSwap} className="swap-btn">⇄</button>
+            <LanguageSelector
+              selectedLang={targetLang} setSelectedLang={setTargetLang}
+              placeholder="To" languageOptions={languages} isLoading={isLoading}
+            />
+            <button
+              onClick={handleTranslate}
+              disabled={isTranslating || !inputText.trim() || isLoading}
+              className="translate-button"
+            >
+              {isTranslating ? "..." : "Translate"}
+            </button>
+          </div>
+          <div className="result-box">{translatedText}</div>
+          <button className="speak-btn output-speaker" onClick={() => speak(translatedText, targetLang)}>
+            🔊 Speak Translation
+          </button>
+        </div>
       )}
 
-      {/* NEW WRAPPER FOR TEXTAREA AND ICON */}
-      <div className="input-field-wrapper">
-        <textarea
-          rows="4"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder="Enter text to translate"
-          className="text-input"
-        />
+      {activeTab === 'guide' && (
+        <div className="guide-container">
+          <div className="guide-header">
+            <h2>📚 Language Mastery Guide</h2>
+            <p>Master essential phrases with phonetics and pro learning tips.</p>
+          </div>
 
-        {/* MIC BUTTON - Positioned absolutely inside the wrapper */}
-        <button 
-          onClick={startListening} 
-          className="mic-btn" 
-          aria-label={listening ? "Listening..." : "Start voice input"}
-        >
-          <MicIcon isListening={listening} />
-        </button>
-      </div>
+          <div className="guide-grid">
+            <div className="guide-card">
+              <div className="card-tag">Essentials</div>
+              <h3>👋 Greetings</h3>
+              <div className="phrase-row">
+                <div><strong>Hello</strong> <small>/ha-loh/</small></div>
+                <div className="gold-text">Halo</div>
+              </div>
+              <div className="phrase-row">
+                <div><strong>Thank You</strong> <small>/te-ri-ma ka-sih/</small></div>
+                <div className="gold-text">Terima Kasih</div>
+              </div>
+            </div>
 
+            <div className="guide-card">
+              <div className="card-tag social">Social</div>
+              <h3>💬 Socializing</h3>
+              <div className="phrase-row">
+                <div><strong>How are you?</strong> <small>/ah-pah kah-bar/</small></div>
+                <div className="gold-text">Apa kabar?</div>
+              </div>
+              <div className="phrase-row">
+                <div><strong>Excuse me</strong> <small>/per-mee-see/</small></div>
+                <div className="gold-text">Permisi</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* SPEAK INPUT BUTTON (Moved outside the wrapper) */}
-      <button
-        onClick={() => speak(inputText, sourceLang)}
-        className="speak-btn input-speaker-btn" /* Added a new class for styling */
-      >
-        🔊 Speak Input
-      </button>
+      {activeTab === 'quiz' && (
+        <div className="quiz-container">
+          <h2>🎯 Knowledge Quiz</h2>
+          {showScore ? (
+            <div className="result-screen">
+              <h3>Quiz Finished!</h3>
+              <div className="score-circle">
+                <span>{score} / {quizQuestions.length}</span>
+              </div>
+              
+              {wrongAnswers.length > 0 && (
+                <div className="review-section">
+                  <h4>Review Your Errors:</h4>
+                  {wrongAnswers.map((item, index) => (
+                    <div key={index} className="review-item">
+                      <p className="review-q">❓ {item.q}</p>
+                      <p className="review-a">✅ Correct Answer: <span>{item.correct}</span></p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-      {/* LANGUAGE CONTROLS */}
-      <div className="horizontal-controls">
-        <LanguageSelector
-          selectedLang={sourceLang}
-          setSelectedLang={setSourceLang}
-          placeholder="From"
-          languageOptions={languages}
-          isLoading={isLoading}
-        />
+              <p>{score === quizQuestions.length ? "Perfect! You're a pro! 🏆" : "Keep practicing to improve! 💪"}</p>
+              <button className="translate-button" onClick={resetQuiz}>Restart Quiz</button>
+            </div>
+          ) : (
+            <div className="question-box">
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: `${((currentQuestion + 1) / quizQuestions.length) * 100}%`}}></div>
+              </div>
+              <p className="question-counter">Question {currentQuestion + 1} of {quizQuestions.length}</p>
+              <h3 className="question-text">{quizQuestions[currentQuestion].q}</h3>
+              
+              {lastResult && (
+                <div className={`quiz-feedback ${lastResult.includes("Correct") ? "success" : "error"}`}>
+                  {lastResult}
+                </div>
+              )}
 
-        <button onClick={handleSwap} className="swap-btn">
-          ⇄
-        </button>
-
-        <LanguageSelector
-          selectedLang={targetLang}
-          setSelectedLang={setTargetLang}
-          placeholder="To"
-          languageOptions={languages}
-          isLoading={isLoading}
-        />
-
-        <button
-          onClick={handleTranslate}
-          disabled={isTranslating || !inputText.trim() || isLoading}
-          className="translate-button"
-        >
-          {isTranslating ? "..." : "Translate"}
-        </button>
-      </div>
-
-      {/* RESULT */}
-      <div className="result-box">{translatedText}</div>
-
-      <button
-        className="speak-btn output-speaker"
-        onClick={() => speak(translatedText, targetLang)}
-      >
-        🔊 Speak Translation
-      </button>
+              <div className="options-grid">
+                {quizQuestions[currentQuestion].a.map((option, index) => (
+                  <button 
+                    key={index} 
+                    className={`option-btn ${isAnswered ? "disabled" : ""}`} 
+                    onClick={() => handleAnswer(index)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
