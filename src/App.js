@@ -68,7 +68,6 @@ const LanguageSelector = ({
 
       {isOpen && (
         <ul className="language-list">
-          {isLoading && <li className="loading">Loading...</li>}
           {!isLoading && (
             <input
               type="text"
@@ -112,6 +111,10 @@ const App = () => {
   const [notification, setNotification] = useState(null);
   const [listening, setListening] = useState(false);
 
+  // --- PROGRESS & SOCIAL STATES ---
+  const [userXP, setUserXP] = useState(parseInt(localStorage.getItem("userXP")) || 0);
+  const [weeklyTarget] = useState(500);
+
   // --- QUIZ STATE ---
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
@@ -140,14 +143,9 @@ const App = () => {
             },
           }
         );
-        const list = res.data.data.languages || [];
-        setLanguages(list);
-        const defaultSource = list.find((l) => l.code === "en")?.code || list[0]?.code;
-        const defaultTarget = list.find((l) => l.code === "id")?.code || list[1]?.code;
-        setSourceLang(defaultSource);
-        setTargetLang(defaultTarget);
+        setLanguages(res.data.data.languages || []);
       } catch (err) {
-        setNotification("Error: Could not load language list.");
+        setNotification("Error: Could not load languages.");
       }
     };
     fetchLanguages();
@@ -161,12 +159,8 @@ const App = () => {
   }, [notification]);
 
   const handleTranslate = async () => {
-    if (!inputText.trim() || isTranslating) {
-      setNotification("Please enter text to translate.");
-      return;
-    }
+    if (!inputText.trim() || isTranslating) return;
     setIsTranslating(true);
-    setTranslatedText("Translating...");
     try {
       const res = await axios.post(
         "https://text-translator2.p.rapidapi.com/translate",
@@ -186,7 +180,6 @@ const App = () => {
       setTranslatedText(res.data.data.translatedText);
     } catch (err) {
       setNotification("Translation failed.");
-      setTranslatedText("Translation error.");
     }
     setIsTranslating(false);
   };
@@ -194,75 +187,65 @@ const App = () => {
   const handleSwap = () => {
     setSourceLang(targetLang);
     setTargetLang(sourceLang);
-    if (inputText.trim()) handleTranslate();
-  };
-
-  const langMap = {
-    en: "en-US", yo: "yo-NG", fr: "fr-FR", es: "es-ES", de: "de-DE",
-    it: "it-IT", pt: "pt-PT", ar: "ar-SA", zh: "zh-CN", ja: "ja-JP",
-    ko: "ko-KR", id: "id-ID",
   };
 
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition not supported on this device.");
+      alert("Speech recognition not supported.");
       return;
     }
     const recognition = new SpeechRecognition();
-    recognition.lang = langMap[sourceLang] || "en-US";
-    recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.lang = sourceLang;
     setListening(true);
     recognition.start();
     recognition.onresult = (event) => {
-      const spoken = event.results[0][0].transcript;
-      setInputText(spoken);
+      setInputText(event.results[0][0].transcript);
       setListening(false);
-      handleTranslate();
     };
-    recognition.onerror = () => {
-      setListening(false);
-      setNotification("Speech recognition error.");
-    };
+    recognition.onerror = () => setListening(false);
     recognition.onend = () => setListening(false);
   };
 
   const speak = (text, lang) => {
     if (!text) return;
     const msg = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const found = voices.find((v) => v.lang.toLowerCase().includes(lang.toLowerCase()));
-    if (found) msg.voice = found;
+    msg.lang = lang;
     window.speechSynthesis.speak(msg);
   };
 
-  // --- QUIZ LOGIC ---
+  const requestNotification = () => {
+    if (!("Notification" in window)) return;
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        setNotification("Reminders active! 🔔");
+      }
+    });
+  };
+
   const handleAnswer = (index) => {
     if (isAnswered) return;
     const correctIdx = quizQuestions[currentQuestion].correct;
     setIsAnswered(true);
 
     if (index === correctIdx) {
-      setScore(score + 1);
+      setScore(prev => prev + 1);
       setLastResult("Correct! ✨");
     } else {
-      const correctAnswerText = quizQuestions[currentQuestion].a[correctIdx];
-      setLastResult(`Wrong. The correct answer was: ${correctAnswerText}`);
-      setWrongAnswers([...wrongAnswers, {
-        q: quizQuestions[currentQuestion].q,
-        correct: correctAnswerText
-      }]);
+      setLastResult(`Wrong. Correct was: ${quizQuestions[currentQuestion].a[correctIdx]}`);
+      setWrongAnswers(prev => [...prev, { q: quizQuestions[currentQuestion].q, correct: quizQuestions[currentQuestion].a[correctIdx] }]);
     }
 
-    // Delay to let user read the feedback
     setTimeout(() => {
-      const nextQuestion = currentQuestion + 1;
-      if (nextQuestion < quizQuestions.length) {
-        setCurrentQuestion(nextQuestion);
+      if (currentQuestion + 1 < quizQuestions.length) {
+        setCurrentQuestion(prev => prev + 1);
         setIsAnswered(false);
         setLastResult(null);
       } else {
+        const earnedXP = (score + (index === correctIdx ? 1 : 0)) * 20;
+        const totalXP = userXP + earnedXP;
+        setUserXP(totalXP);
+        localStorage.setItem("userXP", totalXP);
         setShowScore(true);
       }
     }, 2000);
@@ -277,109 +260,65 @@ const App = () => {
     setWrongAnswers([]);
   };
 
+  const leaderboardData = [
+    { name: "You", xp: userXP },
+    { name: "Ahmad", xp: 1200 },
+    { name: "Sarah", xp: 850 },
+  ].sort((a, b) => b.xp - a.xp);
+
   const isLoading = languages.length === 0;
 
   return (
     <div className="app-main-wrapper">
       <div className="nav-tabs">
-        <button 
-          className={activeTab === 'translator' ? 'nav-btn active' : 'nav-btn'} 
-          onClick={() => setActiveTab('translator')}
-        >
-          🔄 Translator
-        </button>
-        <button 
-          className={activeTab === 'guide' ? 'nav-btn active' : 'nav-btn'} 
-          onClick={() => setActiveTab('guide')}
-        >
-          📚 Learning Guide
-        </button>
-        <button 
-          className={activeTab === 'quiz' ? 'nav-btn active' : 'nav-btn'} 
-          onClick={() => setActiveTab('quiz')}
-        >
-          🎯 Quiz
-        </button>
+        <button className={activeTab === 'translator' ? 'nav-btn active' : 'nav-btn'} onClick={() => setActiveTab('translator')}>🔄 Translator</button>
+        <button className={activeTab === 'guide' ? 'nav-btn active' : 'nav-btn'} onClick={() => setActiveTab('guide')}>📚 Guide</button>
+        <button className={activeTab === 'quiz' ? 'nav-btn active' : 'nav-btn'} onClick={() => setActiveTab('quiz')}>🎯 Quiz</button>
+        <button className={activeTab === 'social' ? 'nav-btn active' : 'nav-btn'} onClick={() => setActiveTab('social')}>🏆 Social</button>
       </div>
+
+      {notification && <div className="notification-bar">{notification}</div>}
 
       {activeTab === 'translator' && (
         <div className="translator-container">
           <h2>🌍 Language Translator</h2>
-          {notification && <div className="notification-bar">{notification}</div>}
           <div className="input-field-wrapper">
-            <textarea
-              rows="4"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Enter text to translate"
-              className="text-input"
-            />
+            <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} className="text-input" placeholder="Type here..." />
             <button onClick={startListening} className="mic-btn">
               <MicIcon isListening={listening} />
             </button>
           </div>
-          <button onClick={() => speak(inputText, sourceLang)} className="speak-btn input-speaker-btn">
-            🔊 Speak Input
-          </button>
           <div className="horizontal-controls">
-            <LanguageSelector
-              selectedLang={sourceLang} setSelectedLang={setSourceLang}
-              placeholder="From" languageOptions={languages} isLoading={isLoading}
-            />
+            <LanguageSelector selectedLang={sourceLang} setSelectedLang={setSourceLang} placeholder="From" languageOptions={languages} isLoading={isLoading} />
             <button onClick={handleSwap} className="swap-btn">⇄</button>
-            <LanguageSelector
-              selectedLang={targetLang} setSelectedLang={setTargetLang}
-              placeholder="To" languageOptions={languages} isLoading={isLoading}
-            />
-            <button
-              onClick={handleTranslate}
-              disabled={isTranslating || !inputText.trim() || isLoading}
-              className="translate-button"
-            >
-              {isTranslating ? "..." : "Translate"}
-            </button>
+            <LanguageSelector selectedLang={targetLang} setSelectedLang={setTargetLang} placeholder="To" languageOptions={languages} isLoading={isLoading} />
+            <button onClick={handleTranslate} className="translate-button" disabled={isTranslating}>{isTranslating ? "..." : "Translate"}</button>
           </div>
           <div className="result-box">{translatedText}</div>
-          <button className="speak-btn output-speaker" onClick={() => speak(translatedText, targetLang)}>
-            🔊 Speak Translation
-          </button>
+          <button className="speak-btn" onClick={() => speak(translatedText, targetLang)}>🔊 Speak Translation</button>
         </div>
       )}
 
-      {activeTab === 'guide' && (
+      {activeTab === 'social' && (
         <div className="guide-container">
-          <div className="guide-header">
-            <h2>📚 Language Mastery Guide</h2>
-            <p>Master essential phrases with phonetics and pro learning tips.</p>
+          <h2 className="gold-text">🏆 Leaderboard</h2>
+          <div className="leaderboard-list">
+            {leaderboardData.map((user, i) => (
+              <div key={i} className="leaderboard-item">
+                <span><span className="rank">#{i + 1}</span> {user.name}</span>
+                <span className="gold-text">{user.xp} XP</span>
+              </div>
+            ))}
           </div>
-
-          <div className="guide-grid">
-            <div className="guide-card">
-              <div className="card-tag">Essentials</div>
-              <h3>👋 Greetings</h3>
-              <div className="phrase-row">
-                <div><strong>Hello</strong> <small>/ha-loh/</small></div>
-                <div className="gold-text">Halo</div>
-              </div>
-              <div className="phrase-row">
-                <div><strong>Thank You</strong> <small>/te-ri-ma ka-sih/</small></div>
-                <div className="gold-text">Terima Kasih</div>
-              </div>
+          <h2 className="gold-text" style={{ marginTop: '30px' }}>🎯 Weekly Challenge</h2>
+          <div className="challenge-card">
+            <p>Goal: Reach 500 XP</p>
+            <div className="challenge-progress-bar">
+              <div className="progress-fill" style={{ width: `${Math.min((userXP / weeklyTarget) * 100, 100)}%` }}></div>
             </div>
-
-            <div className="guide-card">
-              <div className="card-tag social">Social</div>
-              <h3>💬 Socializing</h3>
-              <div className="phrase-row">
-                <div><strong>How are you?</strong> <small>/ah-pah kah-bar/</small></div>
-                <div className="gold-text">Apa kabar?</div>
-              </div>
-              <div className="phrase-row">
-                <div><strong>Excuse me</strong> <small>/per-mee-see/</small></div>
-                <div className="gold-text">Permisi</div>
-              </div>
-            </div>
+            <p className="small-text">{userXP} / {weeklyTarget} XP</p>
           </div>
+          <button className="speak-btn" style={{ width: '100%' }} onClick={requestNotification}>🔔 Enable Daily Reminder</button>
         </div>
       )}
 
@@ -388,53 +327,43 @@ const App = () => {
           <h2>🎯 Knowledge Quiz</h2>
           {showScore ? (
             <div className="result-screen">
-              <h3>Quiz Finished!</h3>
-              <div className="score-circle">
-                <span>{score} / {quizQuestions.length}</span>
-              </div>
-              
+              <div className="score-circle"><span>{score} / {quizQuestions.length}</span></div>
+              <p>You earned {score * 20} XP!</p>
               {wrongAnswers.length > 0 && (
                 <div className="review-section">
-                  <h4>Review Your Errors:</h4>
-                  {wrongAnswers.map((item, index) => (
-                    <div key={index} className="review-item">
-                      <p className="review-q">❓ {item.q}</p>
-                      <p className="review-a">✅ Correct Answer: <span>{item.correct}</span></p>
-                    </div>
-                  ))}
+                   {wrongAnswers.map((item, i) => (
+                     <div key={i} className="review-item">
+                       <p>❓ {item.q}</p>
+                       <p>✅ <span className="gold-text">{item.correct}</span></p>
+                     </div>
+                   ))}
                 </div>
               )}
-
-              <p>{score === quizQuestions.length ? "Perfect! You're a pro! 🏆" : "Keep practicing to improve! 💪"}</p>
-              <button className="translate-button" onClick={resetQuiz}>Restart Quiz</button>
+              <button className="translate-button" onClick={resetQuiz}>Restart</button>
             </div>
           ) : (
             <div className="question-box">
-              <div className="progress-bar">
-                <div className="progress-fill" style={{width: `${((currentQuestion + 1) / quizQuestions.length) * 100}%`}}></div>
-              </div>
-              <p className="question-counter">Question {currentQuestion + 1} of {quizQuestions.length}</p>
+              <div className="progress-bar"><div className="progress-fill" style={{width: `${((currentQuestion + 1) / quizQuestions.length) * 100}%`}}></div></div>
               <h3 className="question-text">{quizQuestions[currentQuestion].q}</h3>
-              
-              {lastResult && (
-                <div className={`quiz-feedback ${lastResult.includes("Correct") ? "success" : "error"}`}>
-                  {lastResult}
-                </div>
-              )}
-
+              {lastResult && <div className={`quiz-feedback ${lastResult.includes("Correct") ? "success" : "error"}`}>{lastResult}</div>}
               <div className="options-grid">
                 {quizQuestions[currentQuestion].a.map((option, index) => (
-                  <button 
-                    key={index} 
-                    className={`option-btn ${isAnswered ? "disabled" : ""}`} 
-                    onClick={() => handleAnswer(index)}
-                  >
-                    {option}
-                  </button>
+                  <button key={index} className="option-btn" onClick={() => handleAnswer(index)} disabled={isAnswered}>{option}</button>
                 ))}
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'guide' && (
+        <div className="guide-container">
+          <h2>📚 Learning Guide</h2>
+          <div className="guide-card">
+            <h3>Essential Phrases</h3>
+            <div className="phrase-row"><span>Hello</span><span className="gold-text">Halo</span></div>
+            <div className="phrase-row"><span>Thank You</span><span className="gold-text">Terima Kasih</span></div>
+          </div>
         </div>
       )}
     </div>
