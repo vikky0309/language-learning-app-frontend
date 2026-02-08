@@ -1,381 +1,314 @@
-/* === Base Styles === */
-body {
-  font-family: "Poppins", sans-serif;
-  background: #000;
-  color: #facc15;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+/* --- Root Variables & Themes --- */
+:root {
+  --primary-gold: #ffd700;
+  --bg-dark: #0f172a;
+  --card-bg: #1e293b;
+  --text-main: #f8fafc;
+  --text-dim: #94a3b8;
+  --success: #22c55e;
+  --error: #ef4444;
+  --border-color: #334155; /* Variable for switching borders */
+  --transition: all 0.3s ease;
+}
+
+/* Light Theme Overrides */
+.light-theme {
+  --bg-dark: #f1f5f9;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-dim: #64748b;
+  --border-color: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-main-wrapper {
   width: 100%;
+  max-width: 500px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 20px 0;
+  gap: 20px;
 }
 
-/* === Navigation Tabs === */
+/* --- Navigation Tabs --- */
 .nav-tabs {
   display: flex;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 25px;
+  background: var(--card-bg);
+  padding: 8px;
+  border-radius: 16px;
+  gap: 5px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  align-items: center;
+  border: 1px solid var(--border-color);
 }
 
 .nav-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(250, 204, 21, 0.3);
-  color: gold;
-  padding: 10px 20px;
-  border-radius: 30px;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 12px 5px;
+  border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
-  transition: 0.3s;
+  font-size: 0.85rem;
+  transition: var(--transition);
 }
 
 .nav-btn.active {
-  background: #facc15;
+  background: var(--primary-gold);
   color: #000;
-  border-color: #facc15;
-  box-shadow: 0 0 15px rgba(250, 204, 21, 0.4);
 }
 
-/* Main Container */
-.translator-container, .guide-container {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  padding: 35px 25px;
-  border-radius: 20px;
-box-shadow: 0 4px 25px rgba(250, 204, 21, 0.4);
-  max-width: 800px;
-  width: 90%;
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 5px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  margin-left: 5px;
+  transition: var(--transition);
+}
+
+/* --- Notification Bar --- */
+.notification-bar {
+  background: var(--primary-gold);
+  color: #000;
+  padding: 10px;
+  border-radius: 8px;
   text-align: center;
+  font-weight: bold;
+  animation: slideDown 0.4s ease;
 }
 
-/* Title */
-h2 {
-  font-size: 1.8rem;
-  margin-bottom: 20px;
-  color: #facc15;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+/* --- Cards & Containers --- */
+.translator-container, .guide-container, .quiz-container {
+  background: var(--card-bg);
+  padding: 24px;
+  border-radius: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease;
 }
 
-/* === Language Controls === */
+h2 { margin-bottom: 20px; font-size: 1.5rem; }
+
+/* --- Translator Logic --- */
+.input-field-wrapper {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.text-input {
+  width: 100%;
+  height: 120px;
+  background: var(--bg-dark);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  color: var(--text-main);
+  padding: 15px;
+  font-size: 1.1rem;
+  resize: none;
+  outline: none;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.mic-btn {
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-dim);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.mic-icon.listening { color: var(--error); animation: pulse 1.5s infinite; }
+
 .horizontal-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
+.swap-btn {
+  background: none;
+  border: none;
+  color: var(--primary-gold);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.result-box {
+  background: var(--border-color);
+  min-height: 80px;
+  padding: 15px;
+  border-radius: 16px;
+  margin-bottom: 10px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+/* --- Language Selector --- */
 .language-selector-container {
   position: relative;
-  width: 100%;
-  flex: 1;
-  min-width: 140px;
 }
 
 .lang-selector-display {
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 2px solid #facc15;
-  background: #111;
-  color: #facc15;
-  font-weight: 500;
-  font-size: 15px;
+  background: var(--bg-dark);
+  border: 2px solid var(--border-color);
+  color: var(--text-main);
+  padding: 10px;
+  border-radius: 10px;
   cursor: pointer;
   text-align: center;
-  box-sizing: border-box;
 }
 
-/* === Dropdown List === */
 .language-list {
   position: absolute;
   top: 100%;
   left: 0;
   width: 100%;
-  background: #111;
-  border: 1px solid #facc15;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   margin-top: 5px;
-  max-height: 180px;
-  overflow-y: auto;
-  z-index: 99;
+  z-index: 1000;
+  list-style: none;
 }
 
 .language-list li {
-  padding: 10px 12px;
-  color: #facc15;
-  cursor: pointer;
-  text-align: left;
-}
-
-.language-list li:hover, .language-list li.selected {
-  background: #facc15;
-  color: #000;
-}
-
-/* === Buttons & Inputs === */
-.swap-btn {
-  background: linear-gradient(135deg, #facc15, #c5a307);
-  border: none;
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 20px;
-}
-
-.input-field-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.text-input {
-  width: 100%;
-  padding: 15px;
-  border-radius: 12px;
-  /* Update this line in your CSS classes */
-background: rgba(250, 204, 21, 0.1); 
-border: 1px solid #facc15; /* Optional: adds a solid gold border to match */
-  color: gold;
-  font-size: 15px;
-  resize: none;
-  box-sizing: border-box;
-}
-
-.mic-btn {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  background: transparent;
-  border: none;
-  width: 30px;
-  height: 30px;
-  cursor: pointer;
-}
-
-.mic-icon { color: #888; }
-.mic-icon.listening { color: #e33; }
-
-.translate-button {
-  background: #facc15;
-  color: #000;
-  font-weight: 700;
-  padding: 14px;
-  border-radius: 25px;
-  width: 100%;
-  cursor: pointer;
-}
-
-.result-box {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 20px;
-  border-radius: 15px;
-  text-align: left;
-  margin-top: 20px;
-}
-
-.speak-btn {
-  background: #111;
-  border: 2px solid #facc15;
-  color: #facc15;
   padding: 10px;
-  border-radius: 12px;
   cursor: pointer;
-  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--text-main);
 }
 
-/* ========================================================= */
-/* === LEARNING GUIDE STYLES === */
-/* ========================================================= */
-.guide-header {
-  margin-bottom: 25px;
-  text-align: left;
-}
+.language-list li:hover { background: var(--border-color); }
 
-.guide-header p { color: #888; font-size: 0.9rem; }
-
-.guide-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  text-align: left;
-}
-
+/* --- Learning Guide --- */
 .guide-card {
-  background: rgba(255, 255, 255, 0.03);
-  padding: 20px;
-  border-radius: 15px;
-  position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(128, 128, 128, 0.05);
+  padding: 15px;
+  border-radius: 16px;
+  margin-bottom: 15px;
 }
-
-.card-tag {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: 0.65rem;
-  background: #facc15;
-  color: #000;
-  padding: 3px 8px;
-  border-radius: 10px;
-  font-weight: bold;
-}
-
-.card-tag.social { background: #3b82f6; color: #fff; }
-.card-tag.travel { background: #10b981; color: #fff; }
 
 .phrase-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.phrase-row small { color: #666; display: block; }
-.gold-text { color: #facc15; font-weight: 600; }
+.gold-text { color: var(--primary-gold); }
 
-.tip-highlight { border: 1px solid #facc15; }
+/* --- Quiz System --- */
+.question-text { margin: 20px 0; text-align: center; }
 
-.troubleshoot-footer {
-  margin-top: 30px;
-  background: rgba(0,0,0,0.2);
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.option-btn {
+  background: var(--border-color);
+  border: 2px solid transparent;
+  color: var(--text-main);
   padding: 15px;
-  border-radius: 10px;
-  text-align: left;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
 }
 
-.troubleshoot-footer h4 { color: #facc15; margin: 0; }
-.troubleshoot-footer p { font-size: 0.8rem; color: #888; }
+.option-btn:hover:not(:disabled) { background: var(--primary-gold); color: #000; }
 
-/* === Responsive === */
-@media (max-width: 768px) {
-  .horizontal-controls { flex-direction: column; }
-  .language-selector-container { width: 100%; }
-}
-/* === QUIZ STYLES === */
-.quiz-container {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  padding: 35px 25px;
-  border-radius: 20px;
-  max-width: 800px;
-  width: 90%;
-  border: 1px solid rgba(250, 204, 21, 0.2); /* Subtle Gold Border */
-}
+.quiz-feedback.success { color: var(--success); }
+.quiz-feedback.error { color: var(--error); }
 
-.question-counter {
-  color: #facc15;
-  font-size: 0.9rem;
-  margin-bottom: 10px;
-  text-align: left;
-}
-
-.question-text {
-  color:gold;
-  font-size: 1.2rem;
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-/* === Progress Bar === */
 .progress-bar {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  height: 8px;
+  background: var(--bg-dark);
   border-radius: 10px;
-  margin-bottom: 20px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: #facc15; /* Matching your gold theme */
+  background: var(--primary-gold);
   transition: width 0.4s ease;
 }
 
-/* === Answer Feedback Part === */
-.quiz-feedback {
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  font-weight: bold;
+/* --- Profile & Shop --- */
+.streak-card {
   text-align: center;
+  padding: 20px;
+  margin-bottom: 20px;
 }
 
-.quiz-feedback.success {
-  background: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-  border: 1px solid #4ade80;
-}
-
-.quiz-feedback.error {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
-  border: 1px solid #f87171;
-}
-
-/* === Options - Compact White Style (Image 2) === */
-.options-grid {
+.freeze-buy-card {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 15px;
-  justify-content: flex-start;
-}
-
-.option-btn {
-  background-color: gold; /* White/Light Grey like Image 2 */
-  color: #000;              /* Black text for contrast */
-  border: 1px solid #ccc;
-  padding: 6px 14px;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-family: inherit;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: var(--border-color);
+  border-radius: 16px;
   cursor: pointer;
-  width: auto;              /* Compact width per word */
-  transition: 0.2s;
+  color: var(--text-main);
 }
 
-.option-btn:hover:not(.disabled) {
-  background-color: #ffffff;
-  border-color: #facc15;
-}
+.freeze-buy-card.owned { border: 2px solid var(--primary-gold); }
 
-.option-btn.disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* === Review List (Post-Quiz) === */
-.review-section {
-  text-align: left;
-  margin-top: 25px;
-  border-top: 1px solid rgba(250, 204, 21, 0.2);
-  padding-top: 20px;
-}
-
-.review-item {
-  margin-bottom: 15px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-}
-
-.review-item span {
-  color: #facc15;
+.translate-button, .speak-btn {
+  background: var(--primary-gold);
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
   font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+  color: #000;
+}
+
+.translate-button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3); }
+
+/* --- Animations --- */
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
